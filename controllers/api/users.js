@@ -6,7 +6,11 @@ const Thought = require('../../models/Thought');
 router.get('/', async (req, res) => {
 	try {
 		const userData = await User.find();
-		res.status(200).json(userData);
+        const formattedUsers = userData.map(user => ({
+            ...user.toObject(),
+            friendCount: user.friendCount,
+        }));
+		res.status(200).json(formattedUsers);
 	} catch (err) {
 		res.status(500).json(err);
 	}
@@ -16,7 +20,11 @@ router.get('/:id', async (req, res) => {
 	const id = req.params.id;
 	try {
 		const userData = await User.findById(id);
-		res.status(200).json(userData);
+        const formattedUsers = {
+            ...userData.toObject(),
+            friendCount: userData.friendCount,
+        };
+		res.status(200).json(formattedUsers);
 	} catch (err) {
 		res.status(500).json(err);
 	}
@@ -36,13 +44,14 @@ router.put('/:id', async (req, res) => {
 	const id = req.params.id;
 	const { username, email } = req.body;
 	try {
-		const user = User.findById(id);
+		const user = await User.findById(id);
 		if (!user) return res.status(404).json({ message: 'No user with this id!' });
 		if (username) user.username = username;
 		if (email) user.email = email;
-		const userData = await user.save();
-		res.status(200).json(userData);
+		await user.save();
+		res.status(200).json(user);
 	} catch (err) {
+		console.log(err);
 		res.status(500).json(err);
 	}
 });
@@ -79,7 +88,7 @@ router.delete('/:userId/friends/:friendId', async (req, res) => {
 		const user = await User.findById(id);
 		const friend = await User.findById(friendId);
 		if (!user || !friend) return res.status(404).json({ message: 'No user with this id!' });
-		user.friends.filter((friend) => friend._id !== friendId);
+		user.friends = user.friends.filter((friend) => friend._id.toString() !== friendId);
 		const userData = await user.save();
 		res.status(200).json(userData);
 	} catch (err) {
